@@ -1,0 +1,139 @@
+{
+  "721775329": {
+    "tg_id": 721775329,
+    "username": "Vladrugs",
+    "name": "Владислав",
+    "phone": "+79643693043",
+    "balance": 99023,
+    "registered": true,
+    "invited_by": null,
+    "invite_rewarded": false,
+    "history": [
+      {
+        "time": "04.03.2026 00:44",
+        "title": "➕ **Начисление бонусов**",
+        "description": "+100 бонусов (начислено администратором Владислав)"
+      },
+      {
+        "time": "04.03.2026 00:44",
+        "title": "➕ **Начисление бонусов**",
+        "description": "+1000 бонусов (начислено администратором Владислав)"
+      }
+    ],
+    "created_at": "2026-03-02T00:47:54.220227",
+    "total_purchases": 71000,
+    "last_activity": "2026-03-05T23:17:00.417215",
+    "last_level_warning": "2026-03-05T20:18:38.090395"
+  },
+  "1734158317": {
+    "tg_id": 1734158317,
+    "username": "Knyazhna_Olya",
+    "name": "꧁ঔৣ Ольга ঔৣ꧂",
+    "phone": "+79062294280",
+    "balance": 39867,
+    "registered": true,
+    "invited_by": "721775329",
+    "invite_rewarded": false,
+    "history": [],
+    "created_at": "2026-01-30T19:48:00.403085",
+    "total_purchases": 1000,
+    "last_activity": "2026-03-05T23:18:44.967791"
+  },
+  "5513015739": {
+    "tg_id": 5513015739,
+    "username": "Mafiaboxa",
+    "name": "SIMA4KA",
+    "phone": "+79992273712",
+    "balance": 400,
+    "registered": true,
+    "invited_by": "721775329",
+    "invite_rewarded": true,
+    "history": [],
+    "created_at": "2026-03-02T02:06:59.960358"
+  },
+  "8494917920": {
+    "tg_id": 8494917920,
+    "username": "PotoIok_n1",
+    "name": "Incognito",
+    "phone": "+79955910224",
+    "balance": 54191,
+    "registered": true,
+    "invited_by": null,
+    "invite_rewarded": false,
+    "history": [],
+    "created_at": "2026-03-02T14:18:44.479083",
+    "total_purchases": 116213,
+    "ratings": [
+      {
+        "rating": 5,
+        "amount": 23434,
+        "date": "2026-03-05T17:31:58.743439"
+      },
+      {
+        "rating": 3,
+        "amount": 12324,
+        "date": "2026-03-05T17:35:34.530793"
+      },
+      {
+        "rating": 4,
+        "amount": 1232,
+        "date": "2026-03-05T17:37:39.355193"
+      },
+      {
+        "rating": 4,
+        "amount": 123,
+        "date": "2026-03-05T17:41:05.266724"
+      },
+      {
+        "rating": 4,
+        "amount": 323,
+        "date": "2026-03-05T17:44:01.101462"
+      }
+    ],
+    "feedback": [
+      {
+        "rating": 3,
+        "feedback": "персонал",
+        "purchase": 12324,
+        "date": "2026-03-05T17:35:45.603082"
+      }
+    ],
+    "last_activity": "2026-03-05T19:43:18.146719"
+  },
+  "7759057572": {
+    "tg_id": 7759057572,
+    "username": null,
+    "name": "Елена Сова СПБ",
+    "phone": null,
+    "balance": 0,
+    "registered": false,
+    "invited_by": "1734158317",
+    "invite_rewarded": false,
+    "history": [],
+    "created_at": "2026-03-03T20:20:47.229279"
+  },
+  "546938690": {
+    "tg_id": 546938690,
+    "username": "natasha772",
+    "name": "Наталья",
+    "phone": "+79062591018",
+    "balance": 400,
+    "registered": true,
+    "invited_by": "721775329",
+    "invite_rewarded": true,
+    "history": [],
+    "created_at": "2026-03-03T23:06:09.342505"
+  },
+  "517162062": {
+    "tg_id": 517162062,
+    "username": "riddik17",
+    "name": "Николай",
+    "phone": null,
+    "balance": 0,
+    "registered": false,
+    "invited_by": "546938690",
+    "invite_rewarded": false,
+    "history": [],
+    "created_at": "2026-03-03T23:07:47.356973"
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "721775329": {
+    "авпв": {
+      "date": "2026-03-06",
+      "reminders": {
+        "7_days": true,
+        "1_day": true,
+        "hour": true,
+        "day_of": true
+      },
+      "created_at": "2026-03-05T17:09:21.817836",
+      "sent_reminders": {
+        "hour": true,
+        "day_of": true
+      }
+    },
+    "уыаывап": {
+      "date": "2026-03-06",
+      "reminders": {
+        "7_days": false,
+        "1_day": true,
+        "hour": true,
+        "day_of": true
+      },
+      "created_at": "2026-03-05T17:10:25.558807",
+      "sent_reminders": {
+        "hour": true,
+        "day_of": true
+      }
+    },
+    "павпувкапвукап": {
+      "date": "2026-03-06",
+      "reminders": {
+        "7_days": false,
+        "1_day": false,
+        "hour": false,
+        "day_of": true
+      },
+      "created_at": "2026-03-05T17:10:46.909027",
+      "sent_reminders": {
+        "day_of": true
+      }
+    },
+    "вапавпвапва": {
+      "date": "2027-03-05",
+      "reminders": {
+        "7_days": false,
+        "1_day": false,
+        "hour": true,
+        "day_of": true
+      },
+      "created_at": "2026-03-05T17:10:58.993295"
+    },
+    "авыаыва": {
+      "date": "2026-03-06",
+      "reminders": {
+        "7_days": true,
+        "1_day": true,
+        "hour": true,
+        "day_of": true
+      },
+      "created_at": "2026-03-05T19:20:07.511347",
+      "sent_reminders": {
+        "hour": true,
+        "day_of": true
+      }
+    }
+  },
+  "8494917920": {
+    "Dr": "2026-03-04"
+  },
+  "1734158317": {
+    "Др, мама": "2026-03-28",
+    "8 марта": "2026-03-08",
+    "Моё др": "2026-06-25",
+    "Новый год": "2026-12-31"
+  }
+}
