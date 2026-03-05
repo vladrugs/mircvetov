@@ -3,4 +3,3 @@ Pillow
 qrcode
 pyzbar
 APScheduler
-python-dotenv
