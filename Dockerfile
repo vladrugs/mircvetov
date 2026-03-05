@@ -1,5 +1,5 @@
 # Используем официальный образ Python
-FROM python:3.14-slim
+FROM python:3.11-slim
 
 # Устанавливаем системные зависимости (именно то, что не получалось сделать через apt-get)
 RUN apt-get update && apt-get install -y \
