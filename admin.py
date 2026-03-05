@@ -6,13 +6,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update, ReplyKe
 from telegram.ext import ContextTypes, CallbackQueryHandler, MessageHandler, ConversationHandler, filters
 from io import BytesIO
 from PIL import Image
-# Пытаемся импортировать pyzbar, если не получается - используем заглушку
-try:
-    from pyzbar.pyzbar import decode
-except ImportError:
-    # Заглушка для случая, когда библиотека не установлена
-    def decode(*args, **kwargs):
-        return []
+from pyzbar.pyzbar import decode
 import re
 import logging
 
