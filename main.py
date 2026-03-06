@@ -2,6 +2,10 @@
 import os
 import sys
 from pathlib import Path
+import warnings
+from telegram.warnings import PTBUserWarning
+
+warnings.filterwarnings("ignore", category=PTBUserWarning)
 
 # Определяем путь для файлов данных
 if os.environ.get('RENDER'):

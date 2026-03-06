@@ -63,7 +63,6 @@ async def notify_admins_new_user(update: Update, context: ContextTypes.DEFAULT_T
             await context.bot.send_message(
                 chat_id=admin_id,
                 text=notification,
-                parse_mode='Markdown'
             )
         except Exception as e:
             logger.error(f"Не удалось отправить уведомление админу {admin_id}: {e}")
@@ -145,19 +144,16 @@ async def handle_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # -------------------- Главное меню --------------------
 async def show_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update_activity(update)  # Обновляем активность
     """Показывает главное меню"""
+    await update_activity(update)
     try:
         # Определяем пользователя
         if update.message:
             user = update.message.from_user
-            chat_id = update.message.chat.id
         elif update.callback_query:
             user = update.callback_query.from_user
-            chat_id = update.callback_query.message.chat.id
         else:
             user = update.effective_user
-            chat_id = update.effective_chat.id
 
         uid = str(user.id)
         users = load_users()
@@ -209,18 +205,26 @@ async def show_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if is_admin(user.id):
             kb.append(["⚙ Админ"])
 
-        # Формируем текст о следующем уровне
+        # Формируем текст о следующем уровне с обработкой ошибок
         next_level_text = ""
-        if level == "НАЧИНАЮЩИЙ":
-            next_level_text = f"\n⬆ До BRONZE: {next_level_threshold - total_purchases} руб."
-        elif level == "BRONZE":
-            next_level_text = f"\n⬆ До SILVER: {next_level_threshold - total_purchases} руб."
-        elif level == "SILVER":
-            next_level_text = f"\n⬆ До GOLD: {next_level_threshold - total_purchases} руб."
-        elif level == "GOLD":
-            next_level_text = f"\n⬆ До PLATINUM: {next_level_threshold - total_purchases} руб."
-        elif level == "PLATINUM":
-            next_level_text = f"\n⬆ До VIP: {next_level_threshold - total_purchases} руб."
+        try:
+            # Преобразуем в числа, чтобы избежать ошибок
+            next_level_threshold_num = int(next_level_threshold) if next_level_threshold else 0
+            total_purchases_num = int(total_purchases)
+            
+            if level == "НАЧИНАЮЩИЙ":
+                next_level_text = f"\n⬆ До BRONZE: {next_level_threshold_num - total_purchases_num} руб."
+            elif level == "BRONZE":
+                next_level_text = f"\n⬆ До SILVER: {next_level_threshold_num - total_purchases_num} руб."
+            elif level == "SILVER":
+                next_level_text = f"\n⬆ До GOLD: {next_level_threshold_num - total_purchases_num} руб."
+            elif level == "GOLD":
+                next_level_text = f"\n⬆ До PLATINUM: {next_level_threshold_num - total_purchases_num} руб."
+            elif level == "PLATINUM":
+                next_level_text = f"\n⬆ До VIP: {next_level_threshold_num - total_purchases_num} руб."
+        except Exception as e:
+            print(f"Ошибка расчета следующего уровня: {e}")
+            next_level_text = ""
 
         # Отправляем сообщение
         if update.message:

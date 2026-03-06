@@ -117,17 +117,17 @@ def reset_yearly_purchases():
 def calc_level(total_purchases):
     """Рассчитывает уровень пользователя по сумме покупок за год"""
     if total_purchases >= 50000:
-        return "VIP", 10, "PLATINUM"
+        return "VIP", 10, 50000  # ← порог для следующего уровня (число)
     elif total_purchases >= 25000:
-        return "PLATINUM", 7, "GOLD"
+        return "PLATINUM", 7, 50000
     elif total_purchases >= 10000:
-        return "GOLD", 5, "SILVER"
+        return "GOLD", 5, 25000
     elif total_purchases >= 5000:
-        return "SILVER", 3, "BRONZE"
+        return "SILVER", 3, 10000
     elif total_purchases >= 1000:
-        return "BRONZE", 2, "НАЧИНАЮЩИЙ"
+        return "BRONZE", 2, 5000
     else:
-        return "НАЧИНАЮЩИЙ", 1, None  # НАЧИНАЮЩИЙ нельзя понизить
+        return "НАЧИНАЮЩИЙ", 1, 1000
 
 def find_user(users, identifier):
     """Ищет пользователя по ID, username или номеру телефона"""
