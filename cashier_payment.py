@@ -326,7 +326,6 @@ async def payment_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         last_reset_year = users[customer_id].get("last_reset_year", current_year)
         
         if last_reset_year < current_year:
-            # Сохраняем историю прошлого года
             old_purchases = users[customer_id].get("total_purchases", 0)
             if old_purchases > 0:
                 if "purchases_history" not in users[customer_id]:
@@ -335,21 +334,10 @@ async def payment_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "year": last_reset_year,
                     "amount": old_purchases
                 })
-                add_history(
-                    customer_id,
-                    "📊 **Годовой сброс**",
-                    f"Покупки за {last_reset_year} год: {old_purchases} руб."
-                )
-            
-            # Обнуляем для нового года
             users[customer_id]["total_purchases"] = 0
             users[customer_id]["last_reset_year"] = current_year
         
-        # Получаем старую сумму покупок ДО обновления
-        old_purchases = users[customer_id].get("total_purchases", 0)
-        
         if current_balance < bonus:
-            # Недостаточно бонусов
             await query.edit_message_text(
                 f"❌ **Недостаточно бонусов!**\n\n"
                 f"Текущий баланс: {current_balance}\n"
@@ -364,32 +352,24 @@ async def payment_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                      f"Запрошено: {bonus}"
             )
         else:
+            # 👇 ВОТ ЗДЕСЬ НУЖНО ВСТАВИТЬ КОД 👇
             # Обновляем баланс и общую сумму покупок
             users[customer_id]["balance"] = current_balance - bonus
-            users[customer_id]["total_purchases"] = old_purchases + purchase
+            users[customer_id]["total_purchases"] = users[customer_id].get("total_purchases", 0) + purchase
             
-            # Добавляем запись в историю
+            # 👇 ДОБАВЬТЕ ЭТИ СТРОКИ ДЛЯ ОТЛАДКИ
+            print(f"🔍 СПИСАНИЕ: customer_id={customer_id}, bonus={bonus}, purchase={purchase}")
+            print(f"🔍 ДАННЫЕ ДЛЯ ИСТОРИИ: title='➖ **Списание бонусов**', description='-{bonus} бонусов (оплата покупки {purchase} руб.)'")
+            
             add_history(
                 customer_id,
                 "➖ **Списание бонусов**",
                 f"-{bonus} бонусов (оплата покупки {purchase} руб.)"
             )
             
+            print(f"✅ add_history вызвана")
+            
             save_users(users)
-            
-            # Проверяем повышение уровня
-            from level_notifications import send_level_up_congratulations, send_level_milestone
-            from utils import check_level_increase
-            
-            level_change = await check_level_increase(int(customer_id), old_purchases, users[customer_id]["total_purchases"])
-            if level_change['increased']:
-                await send_level_up_congratulations(context, int(customer_id), level_change)
-            else:
-                # Проверяем, может быть просто достигнут новый уровень (без повышения)
-                old_level, _, _ = calc_level(old_purchases)
-                new_level, new_cashback, _ = calc_level(users[customer_id]["total_purchases"])
-                if new_level != old_level:
-                    await send_level_milestone(context, int(customer_id), new_level, new_cashback)
             
             # Сообщение покупателю
             await query.edit_message_text(

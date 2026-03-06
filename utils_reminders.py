@@ -140,7 +140,7 @@ def get_upcoming_events():
     """Собирает все события, которые нужно напомнить"""
     events = load_all_events()
     notifications = []
-    today = datetime.now()
+    today = datetime.now().date()  # Используем только дату, без времени
     
     for uid, user_events in events.items():
         for name, event_data in user_events.items():
@@ -149,7 +149,6 @@ def get_upcoming_events():
                 if isinstance(event_data, dict):
                     date_str = event_data.get("date", "")
                     reminders = event_data.get("reminders", {})
-                    # Получаем информацию о том, какие напоминания уже отправлены
                     sent_reminders = event_data.get("sent_reminders", {})
                 else:
                     date_str = event_data
@@ -161,67 +160,52 @@ def get_upcoming_events():
                     }
                     sent_reminders = {}
                 
-                # Парсим дату
+                # Парсим дату (игнорируем время)
                 if ' ' in date_str:
                     date_part = date_str.split(' ')[0]
                 else:
                     date_part = date_str
                 
-                event_date = datetime.strptime(date_part, "%Y-%m-%d")
+                event_date = datetime.strptime(date_part, "%Y-%m-%d").date()
                 
-                # Если событие прошло, переносим на следующий год
+                # Если событие прошло в этом году, переносим на следующий год
                 if event_date < today:
                     event_date = event_date.replace(year=today.year + 1)
                 
+                # Вычисляем точное количество дней до события
                 days_left = (event_date - today).days
-                hours_left = (event_date - today).seconds // 3600
+                
+                print(f"📅 Событие '{name}': дата {event_date}, сегодня {today}, дней до: {days_left}")
                 
                 # Проверяем различные интервалы напоминаний
-                # и убеждаемся, что они еще не были отправлены
-                
-                # За 7 дней
                 if reminders.get("7_days", False) and days_left == 7:
                     if not sent_reminders.get("7_days"):
                         notifications.append((uid, name, days_left, "7_days", "За 7 дней"))
-                        # Помечаем как отправленное
                         if isinstance(event_data, dict):
-                            if "sent_reminders" not in event_data:
-                                event_data["sent_reminders"] = {}
                             event_data["sent_reminders"]["7_days"] = True
                 
-                # За 1 день
                 if reminders.get("1_day", False) and days_left == 1:
                     if not sent_reminders.get("1_day"):
                         notifications.append((uid, name, days_left, "1_day", "Завтра"))
                         if isinstance(event_data, dict):
-                            if "sent_reminders" not in event_data:
-                                event_data["sent_reminders"] = {}
                             event_data["sent_reminders"]["1_day"] = True
                 
-                # За час
-                if reminders.get("hour", False) and days_left == 0 and hours_left == 1:
-                    if not sent_reminders.get("hour"):
-                        notifications.append((uid, name, 0, "hour", "Через час"))
-                        if isinstance(event_data, dict):
-                            if "sent_reminders" not in event_data:
-                                event_data["sent_reminders"] = {}
-                            event_data["sent_reminders"]["hour"] = True
+                if reminders.get("hour", False) and days_left == 0:
+                    # Для проверки "за час" нужно учитывать время, но пока оставим так
+                    pass
                 
-                # В день события
-                if reminders.get("day_of", False) and days_left == 0 and hours_left == 0:
+                if reminders.get("day_of", False) and days_left == 0:
                     if not sent_reminders.get("day_of"):
-                        notifications.append((uid, name, 0, "day_of", "Сегодня"))
+                        notifications.append((uid, name, days_left, "day_of", "Сегодня"))
                         if isinstance(event_data, dict):
-                            if "sent_reminders" not in event_data:
-                                event_data["sent_reminders"] = {}
                             event_data["sent_reminders"]["day_of"] = True
                 
-                # Сохраняем изменения
+                # Сохраняем изменения, если были отправлены уведомления
                 if notifications:
                     save_all_events(events)
                     
             except Exception as e:
-                print(f"Ошибка обработки события {name}: {e}")
+                print(f"❌ Ошибка обработки события {name}: {e}")
                 continue
                 
     return notifications

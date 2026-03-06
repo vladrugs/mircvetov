@@ -4,28 +4,77 @@ import os
 import re
 from datetime import datetime
 import logging
-from telegram.ext import ContextTypes  # Добавьте эту строку
+from pathlib import Path
+from telegram.ext import ContextTypes
 
 # Настройка логирования
 logger = logging.getLogger(__name__)
 
-USER_FILE = "users.json"
+# -------------------- ОПРЕДЕЛЕНИЕ ПУТИ К ФАЙЛАМ --------------------
+# Определяем, где мы запущены (Render или локально)
+if os.environ.get('RENDER'):
+    # На Render используем /tmp для временных файлов
+    DATA_DIR = '/tmp/data'
+else:
+    # Локально используем текущую папку
+    DATA_DIR = '.'
 
+# Создаем папку для данных если её нет
+Path(DATA_DIR).mkdir(parents=True, exist_ok=True)
+
+# Полный путь к файлу users.json
+USER_FILE = os.path.join(DATA_DIR, "users.json")
+
+print(f"📁 Утилиты: файл пользователей будет сохранен в {USER_FILE}")
+
+# -------------------- ЗАГРУЗКА ПОЛЬЗОВАТЕЛЕЙ --------------------
 def load_users():
     """Загружает всех пользователей из файла"""
     if not os.path.exists(USER_FILE):
+        print(f"📁 Файл {USER_FILE} не найден, создаем новый")
         return {}
     try:
         with open(USER_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except:
+            data = json.load(f)
+            print(f"📁 Загружено {len(data)} пользователей из {USER_FILE}")
+            return data
+    except Exception as e:
+        print(f"❌ Ошибка загрузки {USER_FILE}: {e}")
         return {}
 
+# -------------------- СОХРАНЕНИЕ ПОЛЬЗОВАТЕЛЕЙ --------------------
 def save_users(users):
-    """Сохраняет пользователей в файл"""
-    with open(USER_FILE, "w", encoding="utf-8") as f:
-        json.dump(users, f, ensure_ascii=False, indent=2)
+    """Сохраняет пользователей в файл - ИСПРАВЛЕННАЯ ВЕРСИЯ"""
+    try:
+        # Создаем папку, если её нет
+        os.makedirs(os.path.dirname(USER_FILE), exist_ok=True)
+        
+        # Сохраняем во временный файл сначала
+        temp_file = USER_FILE + ".tmp"
+        with open(temp_file, "w", encoding="utf-8") as f:
+            json.dump(users, f, ensure_ascii=False, indent=2, default=str)
+        
+        # Переименовываем (атомарная операция)
+        if os.path.exists(USER_FILE):
+            os.remove(USER_FILE)
+        os.rename(temp_file, USER_FILE)
+        
+        print(f"💾 Файл {USER_FILE} сохранен. Всего пользователей: {len(users)}")
+        
+        # Проверяем, что файл сохранился
+        if os.path.exists(USER_FILE):
+            file_size = os.path.getsize(USER_FILE)
+            print(f"📁 Размер файла: {file_size} байт")
+            return True
+        else:
+            print(f"❌ Файл {USER_FILE} не создан!")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Ошибка сохранения {USER_FILE}: {e}")
+        return False
 
+# -------------------- НОРМАЛИЗАЦИЯ ТЕЛЕФОНА --------------------
 def normalize_phone(phone: str):
     """Нормализует номер телефона к формату +7XXXXXXXXXX"""
     digits = re.sub(r"\D", "", phone)
@@ -35,6 +84,7 @@ def normalize_phone(phone: str):
         digits = "7" + digits
     return "+" + digits
 
+# -------------------- ГАРАНТИЯ НАЛИЧИЯ ПОЛЬЗОВАТЕЛЯ --------------------
 def ensure_user(users, uid, tg_user=None):
     """Гарантирует наличие пользователя в базе данных"""
     if uid not in users:
@@ -52,26 +102,76 @@ def ensure_user(users, uid, tg_user=None):
     u.setdefault("invited_by", None)
     u.setdefault("invite_rewarded", False)
     u.setdefault("history", [])
-    u.setdefault("last_activity", datetime.now().isoformat())  # НОВОЕ
+    u.setdefault("last_activity", datetime.now().isoformat())
     u.setdefault("created_at", datetime.now().isoformat())
 
+# -------------------- ДОБАВЛЕНИЕ ЗАПИСИ В ИСТОРИЮ - ИСПРАВЛЕННАЯ --------------------
 def add_history(uid, title, description):
-    """Добавляет запись в историю пользователя"""
+    """Добавляет запись в историю пользователя - ИСПРАВЛЕННАЯ ВЕРСИЯ"""
+    print(f"\n🔍 add_history вызвана для {uid}")
+    print(f"   title: {title}")
+    print(f"   description: {description}")
+    
+    # Загружаем свежие данные
     users = load_users()
-    ensure_user(users, uid)
+    print(f"   Загружено {len(users)} пользователей")
+    
+    # Проверяем, есть ли пользователь
+    if uid not in users:
+        print(f"❌ Пользователь {uid} не найден!")
+        return False
+    
+    # Создаем историю, если её нет
     if "history" not in users[uid]:
         users[uid]["history"] = []
+        print(f"   Создана новая история для {uid}")
     
+    # Текущее количество записей
+    old_count = len(users[uid]["history"])
+    print(f"   Текущее количество записей: {old_count}")
+    
+    # Создаем запись
     history_entry = {
         "time": datetime.now().strftime("%d.%m.%Y %H:%M"),
         "title": title,
         "description": description
     }
     
+    # Добавляем запись
     users[uid]["history"].append(history_entry)
-    save_users(users)
-    logger.info(f"✅ Добавлена запись в историю для {uid}: {title} - {description}")
+    
+    # Проверяем, что запись добавилась
+    new_count = len(users[uid]["history"])
+    print(f"   Новое количество записей: {new_count}")
+    
+    if new_count <= old_count:
+        print(f"❌ Запись НЕ добавилась!")
+        return False
+    
+    # Сохраняем
+    save_result = save_users(users)
+    if save_result:
+        print(f"✅ Запись успешно сохранена в истории для {uid}")
+        print(f"📊 Теперь в истории {new_count} записей")
+        
+        # Дополнительная проверка - сразу перечитываем файл
+        users_check = load_users()
+        if uid in users_check:
+            check_count = len(users_check[uid].get("history", []))
+            print(f"✅ Проверка: в файле теперь {check_count} записей")
+            if check_count != new_count:
+                print(f"❌ НЕСООТВЕТСТВИЕ: в памяти {new_count}, в файле {check_count}")
+            else:
+                print(f"✅ Данные синхронизированы!")
+        else:
+            print(f"❌ Пользователь {uid} пропал после сохранения!")
+        
+        return True
+    else:
+        print(f"❌ Ошибка сохранения users.json")
+        return False
 
+# -------------------- ГОДОВОЙ СБРОС ПОКУПОК --------------------
 def reset_yearly_purchases():
     """Обнуляет сумму покупок за год и пересчитывает уровень"""
     users = load_users()
@@ -114,10 +214,11 @@ def reset_yearly_purchases():
     
     return changed
 
+# -------------------- РАСЧЕТ УРОВНЯ --------------------
 def calc_level(total_purchases):
     """Рассчитывает уровень пользователя по сумме покупок за год"""
     if total_purchases >= 50000:
-        return "VIP", 10, 50000  # ← порог для следующего уровня (число)
+        return "VIP", 10, 50000
     elif total_purchases >= 25000:
         return "PLATINUM", 7, 50000
     elif total_purchases >= 10000:
@@ -129,6 +230,7 @@ def calc_level(total_purchases):
     else:
         return "НАЧИНАЮЩИЙ", 1, 1000
 
+# -------------------- ПОИСК ПОЛЬЗОВАТЕЛЯ --------------------
 def find_user(users, identifier):
     """Ищет пользователя по ID, username или номеру телефона"""
     identifier_norm = identifier.lower().lstrip("@")
@@ -153,6 +255,7 @@ def find_user(users, identifier):
     
     return None, None
 
+# -------------------- ПОЛУЧЕНИЕ ИНФОРМАЦИИ О ПОЛЬЗОВАТЕЛЕ --------------------
 def get_user_info(uid):
     users = load_users()
     uid_str = str(uid)
@@ -174,6 +277,7 @@ def get_users_by_phone(phone):
             result.append((uid, u))
     return result
 
+# -------------------- ОБНОВЛЕНИЕ БАЛАНСА --------------------
 def update_user_balance(uid, new_balance):
     users = load_users()
     uid_str = str(uid)
@@ -183,6 +287,7 @@ def update_user_balance(uid, new_balance):
         return True
     return False
 
+# -------------------- ДОБАВЛЕНИЕ/СНЯТИЕ БОНУСОВ --------------------
 def add_bonus(uid, amount, reason=""):
     users = load_users()
     uid_str = str(uid)
@@ -211,6 +316,7 @@ def remove_bonus(uid, amount, reason=""):
             return True
     return False
 
+# -------------------- УДАЛЕНИЕ ПОЛЬЗОВАТЕЛЯ --------------------
 def delete_user(user_id):
     users = load_users()
     uid = str(user_id)
@@ -221,6 +327,7 @@ def delete_user(user_id):
         return True
     return False
 
+# -------------------- СТАТИСТИКА --------------------
 def get_user_stats():
     users = load_users()
     total = len(users)
@@ -245,6 +352,7 @@ def get_user_stats():
         "levels": levels
     }
 
+# -------------------- ОЧИСТКА НЕЗАРЕГИСТРИРОВАННЫХ --------------------
 def cleanup_users(days=30):
     users = load_users()
     now = datetime.now()
@@ -269,6 +377,7 @@ def cleanup_users(days=30):
     
     return deleted
 
+# -------------------- ЭКСПОРТ В CSV --------------------
 def export_users_to_csv(filename="users_export.csv"):
     users = load_users()
     import csv
@@ -297,9 +406,8 @@ def export_users_to_csv(filename="users_export.csv"):
     
     logger.info(f"✅ Экспортировано {len(users)} пользователей в {filename}")
     return filename
-    
-# Добавьте эту функцию в utils.py
 
+# -------------------- ОБНОВЛЕНИЕ АКТИВНОСТИ --------------------
 def update_user_activity(uid):
     """Обновляет время последней активности пользователя"""
     users = load_users()
@@ -310,6 +418,7 @@ def update_user_activity(uid):
         return True
     return False
 
+# -------------------- ПОЛУЧЕНИЕ ПОСЛЕДНЕЙ АКТИВНОСТИ --------------------
 def get_last_activity(uid):
     """Возвращает время последней активности пользователя в читаемом формате"""
     users = load_users()
@@ -335,8 +444,8 @@ def get_last_activity(uid):
             except:
                 return "неизвестно"
     return "никогда"
-    
-# ------------------- Проверка и уведомление о снижении уровня -------------------
+
+# -------------------- ПРОВЕРКА СНИЖЕНИЯ УРОВНЯ --------------------
 async def check_level_decrease(context: ContextTypes.DEFAULT_TYPE):
     """Проверяет пользователей, которые давно не заходили и могут потерять уровень"""
     users = load_users()
@@ -414,7 +523,7 @@ async def check_level_decrease(context: ContextTypes.DEFAULT_TYPE):
     print(f"📊 Итого уведомлений: {len(notifications)}")
     return notifications
 
-# ------------------- Проверка повышения уровня после покупки -------------------
+# -------------------- ПРОВЕРКА ПОВЫШЕНИЯ УРОВНЯ --------------------
 async def check_level_increase(user_id: int, old_purchases: int, new_purchases: int):
     """Проверяет, повысился ли уровень после покупки"""
     old_level, old_cashback, _ = calc_level(old_purchases)
@@ -429,3 +538,9 @@ async def check_level_increase(user_id: int, old_purchases: int, new_purchases: 
             'new_cashback': new_cashback
         }
     return {'increased': False}
+
+# -------------------- ФУНКЦИЯ ДЛЯ ПРИНУДИТЕЛЬНОЙ СИНХРОНИЗАЦИИ --------------------
+def force_sync():
+    """Принудительно перезагружает данные с диска"""
+    print("🔄 Принудительная синхронизация данных")
+    return load_users()

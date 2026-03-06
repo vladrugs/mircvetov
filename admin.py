@@ -330,6 +330,7 @@ async def show_client_history(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 # -------------------- Быстрое начисление бонусов --------------------
 async def quick_bonus_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Быстрое начисление/снятие бонусов - ИСПРАВЛЕННАЯ ВЕРСИЯ"""
     # Обновляем активность админа
     if update.effective_user:
         update_user_activity(update.effective_user.id)
@@ -1612,10 +1613,7 @@ async def handle_user_selection(update: Update, context: ContextTypes.DEFAULT_TY
 
 # -------------------- Ввод суммы для начисления/снятия --------------------
 async def admin_amount_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Обновляем активность админа
-    if update.effective_user:
-        update_user_activity(update.effective_user.id)
-    
+    """Обрабатывает ввод суммы для начисления или снятия бонусов - ИСПРАВЛЕННАЯ ВЕРСИЯ"""
     user = update.message.from_user
     text = update.message.text.strip()
     
@@ -1642,6 +1640,7 @@ async def admin_amount_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
         )
         return ADMIN_AMOUNT
 
+    # Загружаем свежие данные
     users = load_users()
     target_uid = admin_actions[user.id]["target"]
     target_name = admin_actions[user.id].get("target_name", "Пользователь")
@@ -1649,11 +1648,14 @@ async def admin_amount_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     if action == "admin_add":
         users[target_uid]["balance"] = users[target_uid].get("balance", 0) + amount
+        
+        # ✅ add_history УЖЕ СОХРАНЯЕТ, НЕ НУЖНО ДОПОЛНИТЕЛЬНОЕ save_users!
         add_history(
             target_uid, 
             "➕ **Начисление бонусов**", 
             f"+{amount} бонусов (начислено администратором {user.first_name})"
         )
+        
         await update.message.reply_text(
             f"✅ **Бонусы начислены!**\n\n"
             f"👤 Пользователь: {target_name}\n"
@@ -1675,11 +1677,14 @@ async def admin_amount_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
             return await show_menu(update, context)
         
         users[target_uid]["balance"] = current_balance - amount
+        
+        # ✅ add_history УЖЕ СОХРАНЯЕТ, НЕ НУЖНО ДОПОЛНИТЕЛЬНОЕ save_users!
         add_history(
             target_uid, 
             "➖ **Списание бонусов**", 
             f"-{amount} бонусов (снято администратором {user.first_name})"
         )
+        
         await update.message.reply_text(
             f"✅ **Бонусы сняты!**\n\n"
             f"👤 Пользователь: {target_name}\n"
@@ -1689,8 +1694,12 @@ async def admin_amount_input(update: Update, context: ContextTypes.DEFAULT_TYPE)
             reply_markup=ReplyKeyboardRemove()
         )
 
-    save_users(users)
+    # ✅ УБИРАЕМ save_users(users) - ОН ПЕРЕЗАПИСЫВАЕТ СТАРЫЕ ДАННЫЕ!
+    # add_history уже сохранил
+    
+    # Удаляем временные данные
     del admin_actions[user.id]
+    
     from handlers import show_menu
     return await show_menu(update, context)
 
@@ -1807,16 +1816,15 @@ async def redeem_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
 
     users[target_id]["balance"] = current_balance - amount
-    
-    # Получаем имя пользователя
-    target_user = users[target_id]
-    name = target_user.get('name', 'Неизвестно')
-    
+
     add_history(
         target_id,
         "➖ **Списание бонусов по QR**",
         f"-{amount} бонусов (списано по QR-коду администратором {user.first_name})"
     )
+    
+    users = load_users()
+    print(f"🔍 После добавления: в истории пользователя {target_uid} {len(users[target_uid].get('history', []))} записей")
     
     save_users(users)
     

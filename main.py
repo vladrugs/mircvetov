@@ -7,6 +7,32 @@ from telegram.warnings import PTBUserWarning
 
 warnings.filterwarnings("ignore", category=PTBUserWarning)
 
+
+import threading
+import time
+from http.server import HTTPServer, BaseHTTPRequestHandler
+
+# Простой HTTP-сервер для Render (чтобы не было предупреждения о портах)
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Bot is running!")
+
+    def log_message(self, format, *args):
+        # Отключаем логирование запросов
+        pass
+
+def run_health_server():
+    port = int(os.environ.get('PORT', 10000))
+    server = HTTPServer(('0.0.0.0', port), HealthCheckHandler)
+    print(f"💓 Health check server running on port {port}")
+    server.serve_forever()
+
+# Запускаем в отдельном потоке
+health_thread = threading.Thread(target=run_health_server, daemon=True)
+health_thread.start()
+
 # Определяем путь для файлов данных
 if os.environ.get('RENDER'):
     # На Render используем /tmp для временных файлов
@@ -18,8 +44,6 @@ else:
 # Создаем папку для данных если её нет
 Path(DATA_DIR).mkdir(parents=True, exist_ok=True)
 
-# Обновляем пути к файлам (пример для users.json)
-USER_FILE = os.path.join(DATA_DIR, "users.json")
 # Аналогично для других файлов...
 
 import logging
@@ -34,12 +58,13 @@ from telegram.ext import (
 from handlers import (
     start, handle_contact, balance, invite, contacts,
     show_history, show_qr, back_to_menu, get_register_customer_conv,
-    handle_back_to_menu, history_navigation, any_message_to_menu,
-    check_balance_callback, history_callback
+    handle_back_to_menu, any_message_to_menu,
+    check_balance_callback, history_callback, test_history,
+    open_admin_menu  # 👈 ДОБАВЛЯЕМ ЭТОТ ИМПОРТ
 )
 
 # Импортируем из admin.py
-from admin import admin_menu, get_admin_conv
+from admin import get_admin_conv  # 👈 ТОЛЬКО get_admin_conv, НЕ admin_menu
 from roles import admins
 from utils_reminders import get_upcoming_events
 from utils import reset_yearly_purchases
@@ -110,7 +135,7 @@ def main():
     app.add_handler(ratings_conv)
     
     # ------------------- Админка -------------------
-    app.add_handler(MessageHandler(filters.Regex("⚙ Админ"), admin_menu))
+    app.add_handler(MessageHandler(filters.Regex("⚙ Админ"), open_admin_menu))  # 👈 ИСПРАВЛЕНО
     app.add_handler(get_admin_conv())
     app.bot_data["admins"] = admins
     
@@ -122,7 +147,6 @@ def main():
     
     # ------------------- Обработчик инлайн-кнопок -------------------
     app.add_handler(payment_callback_handler)
-    app.add_handler(CallbackQueryHandler(history_navigation, pattern="^(history_page_|back_to_menu_from_history)$"))
     app.add_handler(CallbackQueryHandler(check_balance_callback, pattern="^check_balance$"))
     app.add_handler(CallbackQueryHandler(history_callback, pattern="^history$"))
     
@@ -131,6 +155,7 @@ def main():
     
     # ------------------- Обработчики событий -------------------
     app.add_handler(conv_events)
+    app.add_handler(CommandHandler("test", test_history))
     
     # ------------------- Навигация -------------------
     app.add_handler(MessageHandler(filters.Regex("⬅ Назад в главное меню"), back_to_menu))
@@ -142,10 +167,7 @@ def main():
     # ------------------- Фоновые задачи -------------------
     app.job_queue.run_repeating(reminders_job, interval=3600, first=60)
     app.job_queue.run_daily(yearly_reset_job, time=datetime.time(0, 0, 0))
-    
-    # Запускаем проверку уровней каждый день в 10:00
     app.job_queue.run_daily(level_check_job, time=datetime.time(10, 0, 0))
-    # Для теста можно запустить через 10 секунд
     app.job_queue.run_once(level_check_job, when=10)
 
     print("✅ Бот запущен")
@@ -155,7 +177,7 @@ def main():
     print("   - События и напоминания с настройками")
     print("   - Админ-панель с выбором пользователей")
     print("   - Оплата бонусами для кассиров")
-    print("   - История операций с постраничным просмотром")
+    print("   - История операций")
     print("   - Уведомления админам о новых регистрациях")
     print("   - Любое сообщение открывает главное меню")
     app.run_polling(drop_pending_updates=True)

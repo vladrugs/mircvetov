@@ -329,139 +329,78 @@ async def contacts(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=reply_markup
     )
 
-# -------------------- Функция для форматирования истории --------------------
-def format_history_entry(entry):
-    """Форматирует запись истории для красивого отображения"""
-    time = entry.get('time', '')
-    title = entry.get('title', 'Операция')
-    description = entry.get('description', '')
-    
-    # Определяем эмодзи по типу операции
-    if "➕" in title or "Начисление" in title:
-        emoji = '➕'
-    elif "➖" in title or "Списание" in title:
-        emoji = '➖'
-    elif "Годовой" in title:
-        emoji = '📅'
-    else:
-        emoji = '📝'
-    
-    return f"{emoji} **{title}**\n   └ {time} — {description}"
-
-# -------------------- История --------------------
+# -------------------- ИСПРАВЛЕННАЯ ФУНКЦИЯ ИСТОРИИ --------------------
 async def show_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update_activity(update)  # Обновляем активность
-    user = update.effective_user
-    uid = str(user.id)
-    users = load_users()
-    ensure_user(users, uid, user)
-
-    history = users[uid].get("history", [])
+    """Показывает историю операций - ФИНАЛЬНАЯ ВЕРСИЯ"""
+    print("🔥🔥🔥 show_history ВЫЗВАНА! 🔥🔥🔥")
     
-    if not history:
-        await update.message.reply_text(
-            "📄 **История операций пуста**\n\n"
-            "Здесь будут отображаться все начисления и списания бонусов.",
-            parse_mode='Markdown'
-        )
-        return
-
-    # Сортируем историю по времени (сначала новые)
-    sorted_history = sorted(history, key=lambda x: x.get('time', ''), reverse=True)
-    
-    # Разбиваем на страницы по 5 записей
-    page = 0
-    context.user_data['history_page'] = page
-    context.user_data['history_data'] = sorted_history
-    
-    await show_history_page(update, context, page)
-
-async def show_history_page(update: Update, context: ContextTypes.DEFAULT_TYPE, page: int):
-    await update_activity(update)  # Обновляем активность
-    """Показывает страницу истории"""
-    user = update.effective_user
-    uid = str(user.id)
-    users = load_users()
-    history = context.user_data.get('history_data', [])
-    
-    if not history:
-        return
-    
-    items_per_page = 5
-    total_pages = (len(history) + items_per_page - 1) // items_per_page
-    start_idx = page * items_per_page
-    end_idx = min(start_idx + items_per_page, len(history))
-    
-    # Заголовок
-    text = f"📄 **История операций** (страница {page + 1}/{total_pages})\n\n"
-    
-    # Записи
-    for i in range(start_idx, end_idx):
-        entry = history[i]
-        text += format_history_entry(entry) + "\n\n"
-    
-    # Статистика
-    total_plus = 0
-    total_minus = 0
-    for e in history:
-        desc = e.get('description', '')
-        if '+' in desc:
-            try:
-                total_plus += int(desc.split()[0].replace('+', ''))
-            except:
-                pass
-        elif '-' in desc:
-            try:
-                total_minus += int(desc.split()[0].replace('-', ''))
-            except:
-                pass
-    
-    text += f"📊 **Итого:** +{total_plus} / -{total_minus}"
-    
-    # Кнопки навигации
-    keyboard = []
-    nav_row = []
-    
-    if page > 0:
-        nav_row.append(InlineKeyboardButton("◀ Предыдущая", callback_data=f"history_page_{page-1}"))
-    if page < total_pages - 1:
-        nav_row.append(InlineKeyboardButton("Следующая ▶", callback_data=f"history_page_{page+1}"))
-    
-    if nav_row:
-        keyboard.append(nav_row)
-    
-    keyboard.append([InlineKeyboardButton("🔙 В меню", callback_data="back_to_menu_from_history")])
-    
-    reply_markup = InlineKeyboardMarkup(keyboard) if keyboard else None
-    
-    if update.callback_query:
-        await update.callback_query.message.edit_text(
-            text,
-            reply_markup=reply_markup,
-            parse_mode='Markdown'
-        )
+    # Получаем пользователя
+    if update.message:
+        user = update.message.from_user
+    elif update.callback_query:
+        user = update.callback_query.from_user
     else:
-        await update.message.reply_text(
-            text,
-            reply_markup=reply_markup,
-            parse_mode='Markdown'
-        )
-
-async def history_navigation(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update_activity(update)  # Обновляем активность
-    """Обработка навигации по истории"""
-    query = update.callback_query
-    await query.answer()
+        user = update.effective_user
     
-    data = query.data
+    uid = str(user.id)
+    print(f"👤 Пользователь: {user.first_name} (ID: {uid})")
     
-    if data == "back_to_menu_from_history":
-        await show_menu(update, context)
+    # Импортируем utils и используем force_sync для свежих данных
+    import utils
+    
+    # Принудительно синхронизируем
+    users = utils.force_sync()
+    print(f"📁 Загружено {len(users)} пользователей из {utils.USER_FILE}")
+    
+    if uid not in users:
+        await update.message.reply_text("❌ Пользователь не найден")
         return
     
-    if data.startswith("history_page_"):
-        page = int(data.split("_")[2])
-        await show_history_page(update, context, page)
+    # Получаем историю
+    history = users[uid].get("history", [])
+    print(f"📊 Найдено записей в истории: {len(history)}")
+    
+    # Выводим все записи для отладки
+    if history:
+        print("📋 Список записей:")
+        for i, entry in enumerate(history):
+            print(f"  {i+1}. {entry.get('time')} - {entry.get('description')}")
+    else:
+        print("📋 История пуста")
+    
+    if not history:
+        await update.message.reply_text("📄 История пуста")
+        return
+    
+    # Формируем текст истории
+    text = "📄 **ИСТОРИЯ ОПЕРАЦИЙ**\n\n"
+    
+    # Перебираем все записи (от новых к старым)
+    for entry in reversed(history):
+        time = entry.get('time', '')
+        description = entry.get('description', '')
+        
+        # Определяем эмодзи по описанию
+        if description.startswith('+'):
+            emoji = '➕'
+        elif description.startswith('-'):
+            emoji = '➖'
+        else:
+            emoji = '📝'
+        
+        text += f"{emoji} **{time}**\n"
+        text += f"   {description}\n\n"
+    
+    print(f"📄 Длина текста: {len(text)} символов")
+    
+    # Отправляем сообщение
+    try:
+        await update.message.reply_text(text, parse_mode='Markdown')
+        print("✅ История успешно отправлена!")
+    except Exception as e:
+        print(f"❌ Ошибка при отправке: {e}")
+        # Если ошибка с Markdown, отправляем без форматирования
+        await update.message.reply_text(text.replace('*', ''))
 
 # -------------------- QR --------------------
 async def show_qr(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -660,7 +599,6 @@ def get_register_customer_conv():
         name="register_customer_conv"
     )
     
-    # Добавьте в конец файла
 async def check_balance_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик кнопки проверки баланса"""
     query = update.callback_query
@@ -672,3 +610,21 @@ async def history_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     await show_history(update, context)
+    
+async def test_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Тестовая команда для проверки истории"""
+    user = update.effective_user
+    uid = str(user.id)
+    users = load_users()
+    
+    history = users[uid].get("history", [])
+    
+    text = f"👤 Пользователь: {user.first_name} (ID: {uid})\n"
+    text += f"📊 Всего записей: {len(history)}\n\n"
+    
+    for i, entry in enumerate(history):
+        text += f"{i+1}. {entry.get('time')}\n"
+        text += f"   {entry.get('title')}\n"
+        text += f"   {entry.get('description')}\n\n"
+    
+    await update.message.reply_text(text)
